@@ -164,7 +164,18 @@ def tick():
     triggers_list = data.get("available_triggers", [])
     actions = []
     
+    # Sort triggers by urgency (descending) to prioritize critical alerts
+    def get_urgency(tid):
+        t_ctx = contexts.get(("trigger", tid))
+        if t_ctx:
+            return t_ctx.get("payload", {}).get("urgency", 1)
+        return 1
+
+    triggers_list = sorted(triggers_list, key=get_urgency, reverse=True)
+
     for trg_id in triggers_list:
+        if len(actions) >= 20:
+            break
         trg_entry = contexts.get(("trigger", trg_id))
         if not trg_entry:
             continue
@@ -214,7 +225,7 @@ def tick():
             "ts": datetime.now(timezone.utc).isoformat()
         })
         
-    return jsonify({"actions": actions})
+    return jsonify({"actions": actions[:20]})
 
 
 @app.route("/v1/reply", methods=["POST"])
